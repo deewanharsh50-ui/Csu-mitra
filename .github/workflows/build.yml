@@ -9,12 +9,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node & JDK
+      - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -25,28 +25,29 @@ jobs:
 
       - name: Build Web Dist & Cordova APK
         run: |
-          # 1. Install dependencies without peer conflict
+          # 1. Clean lock file to fix npm native binding bug
+          rm -f package-lock.json
           npm install --legacy-peer-deps
 
-          # 2. Build Vite with relative base path (fixes blank screen on phone)
+          # 2. Build Vite bundle
           npx vite build --base=./
 
-          # 3. Create Cordova project with clean package ID
+          # 3. Create Cordova project
           npm install -g cordova
           cordova create csuapp com.csuapp.mitra "CSU Mitra"
           cd csuapp
           cordova platform add android
 
-          # 4. Copy Vite dist files to Cordova www
+          # 4. Copy dist files to Cordova
           rm -rf www/*
           cp -r ../dist/* www/
 
-          # 5. Offline app display settings
+          # 5. Native app settings
           sed -i '/<\/widget>/i \
               <preference name="DisallowOverscroll" value="true" />\
               <preference name="KeepRunning" value="true" />' config.xml
 
-          # 6. Build Debug APK
+          # 6. Compile APK
           cordova build android
 
       - name: Upload Offline APK
