@@ -20,19 +20,31 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build APK via Cordova
+      - name: Build Fullscreen Native-Feel APK
         run: |
           npm install -g cordova
           cordova create csuapp com.csu.mitra "CSU Mitra"
           cd csuapp
           cordova platform add android
           
-          # New URL injection
+          # Status bar aur WebView plugins taaki full app look mile
+          cordova plugin add cordova-plugin-statusbar
+
+          # URL injection
           sed -i 's|<content src="index.html" />|<content src="https://ais-dev-3uoo7exolfbxhw43mwoy45-934728614081.asia-southeast1.run.app" />|' config.xml
           
-          # Allow all network traffic and cleartext
+          # Allow external navigation and clear restrictions
           sed -i 's|<access origin="\*" />|<access origin="*" /><allow-navigation href="*" />|' config.xml
           
+          # Native app properties (fullscreen, no browser bar, smooth scrolling)
+          sed -i '/<\/widget>/i \
+              <preference name="Fullscreen" value="false" />\
+              <preference name="StatusBarOverlaysWebView" value="false" />\
+              <preference name="StatusBarBackgroundColor" value="#000000" />\
+              <preference name="StatusBarStyle" value="lightcontent" />\
+              <preference name="DisallowOverscroll" value="true" />\
+              <preference name="KeepRunning" value="true" />' config.xml
+
           cordova build android
 
       - name: Upload APK
