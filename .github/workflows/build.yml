@@ -1,4 +1,4 @@
-name: Quick Web to APK
+name: Offline Native APK
 on:
   workflow_dispatch:
 
@@ -6,6 +6,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup Node & JDK
         uses: actions/setup-node@v4
         with:
@@ -20,36 +23,35 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build Fullscreen Native-Feel APK
+      - name: Build Web Dist & Cordova APK
         run: |
+          # 1. Install dependencies without peer conflict
+          npm install --legacy-peer-deps
+
+          # 2. Build Vite with relative base path (fixes blank screen on phone)
+          npx vite build --base=./
+
+          # 3. Create Cordova project with clean package ID
           npm install -g cordova
-          cordova create csuapp com.csu.mitra "CSU Mitra"
+          cordova create csuapp com.csuapp.mitra "CSU Mitra"
           cd csuapp
           cordova platform add android
-          
-          # Status bar aur WebView plugins taaki full app look mile
-          cordova plugin add cordova-plugin-statusbar
 
-          # URL injection
-          sed -i 's|<content src="index.html" />|<content src="https://ais-dev-3uoo7exolfbxhw43mwoy45-934728614081.asia-southeast1.run.app" />|' config.xml
-          
-          # Allow external navigation and clear restrictions
-          sed -i 's|<access origin="\*" />|<access origin="*" /><allow-navigation href="*" />|' config.xml
-          
-          # Native app properties (fullscreen, no browser bar, smooth scrolling)
+          # 4. Copy Vite dist files to Cordova www
+          rm -rf www/*
+          cp -r ../dist/* www/
+
+          # 5. Offline app display settings
           sed -i '/<\/widget>/i \
-              <preference name="Fullscreen" value="false" />\
-              <preference name="StatusBarOverlaysWebView" value="false" />\
-              <preference name="StatusBarBackgroundColor" value="#000000" />\
-              <preference name="StatusBarStyle" value="lightcontent" />\
               <preference name="DisallowOverscroll" value="true" />\
               <preference name="KeepRunning" value="true" />' config.xml
 
+          # 6. Build Debug APK
           cordova build android
 
-      - name: Upload APK
+      - name: Upload Offline APK
         uses: actions/upload-artifact@v4
         with:
-          name: CSU-Mitra-APK
+          name: CSU-Mitra-Offline-APK
           path: csuapp/platforms/android/app/build/outputs/apk/debug/*.apk
           
