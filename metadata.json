@@ -1,0 +1,11 @@
+{
+  "name": "CSU Mitra",
+  "description": "Official Central Sanskrit University Academic & Student Helpdesk AI Assistant",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

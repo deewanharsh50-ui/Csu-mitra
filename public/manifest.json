@@ -1,0 +1,33 @@
+{
+  "id": "/",
+  "name": "CSU Mitra",
+  "short_name": "CSU Mitra",
+  "description": "Official Central Sanskrit University Academic & Student Helpdesk AI Assistant",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#78350f",
+  "background_color": "#fafaf9",
+  "categories": ["education", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/maskable-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global catch-all default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Test connection check endpoint
+    match /test/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Global helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidConversation(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'createdAt', 'updatedAt']) &&
+        data.keys().size() == 5 &&
+        data.id is string && isValidId(data.id) &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'conversationId', 'userId', 'role', 'content', 'timestamp']) &&
+        data.keys().size() == 6 &&
+        data.id is string && isValidId(data.id) &&
+        data.conversationId is string && isValidId(data.conversationId) &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.role in ['user', 'assistant'] &&
+        data.content is string && data.content.size() <= 15000 &&
+        data.timestamp is timestamp;
+    }
+
+    // Conversations collection
+    match /conversations/{conversationId} {
+      allow get: if isSignedIn() && isValidId(conversationId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        isValidId(conversationId) &&
+        incoming().id == conversationId &&
+        isValidConversation(incoming()) &&
+        incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() &&
+        isValidId(conversationId) &&
+        existing().userId == request.auth.uid &&
+        isValidConversation(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt']);
+      allow delete: if isSignedIn() && isValidId(conversationId) && resource.data.userId == request.auth.uid;
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow get: if isSignedIn() &&
+          isValidId(conversationId) &&
+          isValidId(messageId) &&
+          resource.data.userId == request.auth.uid;
+        allow list: if isSignedIn() &&
+          isValidId(conversationId) &&
+          resource.data.userId == request.auth.uid;
+        allow create: if isSignedIn() &&
+          isValidId(conversationId) &&
+          isValidId(messageId) &&
+          incoming().id == messageId &&
+          incoming().conversationId == conversationId &&
+          incoming().userId == request.auth.uid &&
+          isValidMessage(incoming()) &&
+          get(/databases/$(database)/documents/conversations/$(conversationId)).data.userId == request.auth.uid;
+        allow update: if false;
+        allow delete: if isSignedIn() &&
+          isValidId(conversationId) &&
+          isValidId(messageId) &&
+          resource.data.userId == request.auth.uid;
+      }
+    }
+  }
+}
