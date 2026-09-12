@@ -26,8 +26,13 @@ jobs:
           cordova create csuapp com.csu.mitra "CSU Mitra"
           cd csuapp
           cordova platform add android
-          # Website URL embed
-          sed -i 's|<content src="index.html" />|<content src="https://ais-pre-3uoo7exolfbxhw43mwoy45-934728614081.asia-southeast1.run.app" />|' config.xml
+          
+          # New URL injection
+          sed -i 's|<content src="index.html" />|<content src="https://ais-dev-3uoo7exolfbxhw43mwoy45-934728614081.asia-southeast1.run.app" />|' config.xml
+          
+          # Allow all network traffic and cleartext
+          sed -i 's|<access origin="\*" />|<access origin="*" /><allow-navigation href="*" />|' config.xml
+          
           cordova build android
 
       - name: Upload APK
