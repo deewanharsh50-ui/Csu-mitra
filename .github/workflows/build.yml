@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Quick Web to APK
 on:
   workflow_dispatch:
 
@@ -6,148 +6,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Set up JDK 17
+      - name: Setup Node & JDK
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
 
-      - name: Create Native Android Project
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APK via Cordova
         run: |
-          mkdir -p AndroidApp/app/src/main/java/com/csu/mitra
-          mkdir -p AndroidApp/app/src/main/res/values
-          mkdir -p AndroidApp/gradle/wrapper
-
-          # Gradle Wrapper Setup
-          cd AndroidApp
-          cat << 'EOF' > settings.gradle
-          rootProject.name = "CSUMitra"
-          include ':app'
-          EOF
-
-          cat << 'EOF' > build.gradle
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.2.2'
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          EOF
-
-          cat << 'EOF' > app/build.gradle
-          plugins {
-              id 'com.android.application'
-          }
-          android {
-              namespace 'com.csu.mitra'
-              compileSdk 34
-
-              defaultConfig {
-                  applicationId "com.csu.mitra"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
-              }
-          }
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-          }
-          EOF
-
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application
-                  android:allowBackup="true"
-                  android:label="CSU Mitra"
-                  android:supportsRtl="true"
-                  android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:configChanges="orientation|screenSize">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-          cat << 'EOF' > app/src/main/res/values/strings.xml
-          <resources>
-              <string name="app_name">CSU Mitra</string>
-          </resources>
-          EOF
-
-          cat << 'EOF' > app/src/main/java/com/csu/mitra/MainActivity.java
-          package com.csu.mitra;
-
-          import android.os.Bundle;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import androidx.appcompat.app.AppCompatActivity;
-
-          public class MainActivity extends AppCompatActivity {
-              private WebView webView;
-
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  webView = new WebView(this);
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setDatabaseEnabled(true);
-                  settings.setUseWideViewPort(true);
-                  settings.setLoadWithOverviewMode(true);
-                  settings.setSupportZoom(false);
-                  
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.loadUrl("https://ais-pre-3uoo7exolfbxhw43mwoy45-934728614081.asia-southeast1.run.app");
-                  setContentView(webView);
-              }
-
-              @Override
-              public void onBackPressed() {
-                  if (webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      super.onBackPressed();
-                  }
-              }
-          }
-          EOF
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Build APK with Gradle
-        run: |
-          cd AndroidApp
-          gradle assembleDebug
+          npm install -g cordova
+          cordova create csuapp com.csu.mitra "CSU Mitra"
+          cd csuapp
+          cordova platform add android
+          # Website URL embed
+          sed -i 's|<content src="index.html" />|<content src="https://ais-pre-3uoo7exolfbxhw43mwoy45-934728614081.asia-southeast1.run.app" />|' config.xml
+          cordova build android
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CSU-Mitra-APK
-          path: AndroidApp/app/build/outputs/apk/debug/*.apk
+          path: csuapp/platforms/android/app/build/outputs/apk/debug/*.apk
           
