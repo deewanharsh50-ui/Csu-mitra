@@ -1,4 +1,4 @@
-name: CSU Mitra Auto-Update Live APK
+name: CSU Mitra Pure Offline APK
 on:
   workflow_dispatch:
 
@@ -9,7 +9,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -23,38 +23,29 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build Live Auto-Updating APK
+      - name: Build Pure Offline APK
         run: |
+          # 1. Frontend bundle compile karein
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
+          npx vite build --base=./
+
+          # 2. Cordova Android App setup
           npm install -g cordova
           cordova create csuapp com.csu.mitra "CSU Mitra"
           cd csuapp
           cordova platform add android
 
-          # Status bar plugin for clean native UI
-          cordova plugin add cordova-plugin-statusbar
+          # 3. Web code ko seedha APK ke andar daalein
+          rm -rf www/*
+          cp -r ../dist/* www/
 
-          # 1. Inject Live Public Shared URL
-          sed -i 's|<content src="index.html" />|<content src="https://ais-dev-3uoo7exolfbxhw43mwoy45-934728614081.asia-southeast1.run.app" />|' config.xml
-          
-          # 2. Open network access & navigation
-          sed -i 's|<access origin="\*" />|<access origin="*" /><allow-navigation href="*" />|' config.xml
-
-          # 3. Auto-update & native experience preferences (prevents stale cache)
-          sed -i '/<\/widget>/i \
-              <preference name="KeepRunning" value="true" />\
-              <preference name="DisallowOverscroll" value="true" />\
-              <preference name="StatusBarOverlaysWebView" value="false" />\
-              <preference name="StatusBarBackgroundColor" value="#000000" />\
-              <preference name="StatusBarStyle" value="lightcontent" />\
-              <preference name="AndroidInsecureFileModeEnabled" value="false" />\
-              <preference name="ClearCache" value="true" />' config.xml
-
-          # Build release-ready Debug APK
+          # 4. Pure offline native build
           cordova build android
 
-      - name: Upload Auto-Updating APK
+      - name: Upload Pure APK
         uses: actions/upload-artifact@v4
         with:
-          name: CSU-Mitra-AutoUpdate-APK
+          name: CSU-Mitra-Pure-APK
           path: csuapp/platforms/android/app/build/outputs/apk/debug/*.apk
           
